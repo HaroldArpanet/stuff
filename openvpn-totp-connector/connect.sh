@@ -4,6 +4,7 @@
 config="config.json"
 
 # Extract values from JSON
+client_type=$(jq -r '.client_type' "$config")
 config_file=$(jq -r '.config_file' "$config")
 username=$(jq -r '.username' "$config")
 password=$(jq -r '.password' "$config")
@@ -20,6 +21,13 @@ if [ "$enable_2fa" == "true" ]; then
 fi
 
 # Connect to OpenVPN
-echo -e "$username\n$password" | sudo openvpn --config "$config_file" --auth-user-pass /dev/stdin
+if [ "$client_type" == "openvpn" ]; then
+        echo -e "$username\n$password" | openvpn --config "$config_file" --auth-user-pass /dev/stdin
+fi
 
-
+if [ "$client_type" == "nmcli" ]; then
+        connection_name=$(jq -r '.connection_name' "$config")
+        echo -e "vpn.secret.password:$password" > password
+        nmcli connection up $connection_name passwd-file password
+        rm password
+fi
